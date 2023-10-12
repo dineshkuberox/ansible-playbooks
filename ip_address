@@ -1,0 +1,19 @@
+---
+- name: Convert CSV to YAML
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Read CSV file
+      community.general.read_csv:
+        path: /root/dinesh/book1.csv
+      register: csv_data
+      delegate_to: localhost
+    - debug: var=csv_data.list
+
+    - name: Create YAML file
+      template:
+        src: ip_address.j2
+        dest: /root/dinesh/ips.yml
+      vars:
+        csv_data: "{{ csv_data.list[] }}"
