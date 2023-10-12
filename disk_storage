@@ -1,0 +1,65 @@
+---
+- name: Manage Apache Server Storage
+  hosts: localhost
+  become: yes
+  connection: local
+
+  tasks:
+    - name: Create a partition on /dev/sdb
+      parted:
+        device: /dev/sdb
+        number: 1
+        state: present
+        part_start: 1MiB
+        part_end: 8GB
+      ignore_errors: yes
+
+    - name: Create a physical volume (PV) on /dev/sdb1
+      lvg:
+        vg: apache-vg
+        pvs: /dev/sdb1
+      ignore_errors: yes
+
+    - name: Create a volume group (VG) named apache-vg
+      lvg:
+        vg: apache-vg
+        pvs: /dev/sdb1
+
+    - name: Create a logical volume (LV) named content-lv
+      lvol:
+        vg: apache-vg
+        lv: content-lv
+        size: 3G
+
+    - name: Create a logical volume (LV) named logs-lv
+      lvol:
+        vg: apache-vg
+        lv: logs-lv
+        size: 2G
+
+    - name: Format content-lv with XFS
+      filesystem:
+        fstype: xfs
+        dev: /dev/apache-vg/content-lv
+
+    - name: Format logs-lv with XFS
+      filesystem:
+        fstype: xfs
+        dev: /dev/apache-vg/logs-lv
+
+    - name: Mount content-lv at /mnt/test-mount
+      ansible.posix.mount:
+        path: /mnt/test-mount
+        src: /dev/apache-vg/content-lv
+        fstype: xfs
+        state: mounted
+        opts: defaults
+
+    - name: Mount logs-lv at /mnt/test-mount2
+      ansible.posix.mount:
+        path: /mnt/test-mount2
+        src: /dev/apache-vg/logs-lv
+        fstype: xfs
+        state: mounted
+        opts: defaults
+
